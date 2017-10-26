@@ -857,6 +857,7 @@ add_library(tests OBJECT
   gecko/test/test.cpp
   gecko/test/MockMediaResource.cpp
   gecko/test/TestMediaMIMETypes.cpp
+  gecko/test/TestMozPromise.cpp
   gecko/test/TestMP4Demuxer.cpp
 )
 target_include_directories(tests PRIVATE
