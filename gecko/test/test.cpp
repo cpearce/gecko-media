@@ -402,6 +402,9 @@ extern void
 Test_MozPromise();
 
 extern void
+Test_MediaDataDecoder();
+
+extern void
 Test_MediaMIMETypes();
 
 extern void
@@ -411,9 +414,9 @@ void
 TestDecoderTraits()
 {
   assert(DecoderTraits::CanHandleContainerType(
-    MediaContainerType(MEDIAMIMETYPE("audio/mp4")), nullptr) == CANPLAY_NO);
+    MediaContainerType(MEDIAMIMETYPE("audio/mp4")), nullptr) == CANPLAY_MAYBE);
   assert(DecoderTraits::CanHandleContainerType(
-    MediaContainerType(MEDIAMIMETYPE("video/mp4")), nullptr) == CANPLAY_NO);
+    MediaContainerType(MEDIAMIMETYPE("video/mp4")), nullptr) == CANPLAY_MAYBE);
   assert(DecoderTraits::CanHandleContainerType(
     MediaContainerType(MEDIAMIMETYPE("audio/wav")), nullptr) == CANPLAY_MAYBE);
 }
@@ -433,6 +436,9 @@ TestGecko()
   mozilla::TestVideoData();
   mozilla::TestAudioData();
   mozilla::Test_MozPromise();
+  // FIXME: This one never ends. Keeps waiting on a ConditionVariable to to be
+  // set in the Benchmark. More investigation required.
+  // mozilla::Test_MediaDataDecoder();
   mozilla::Test_MediaMIMETypes();
   mozilla::Test_MP4Demuxer();
   mozilla::TestDecoderTraits();
