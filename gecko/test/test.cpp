@@ -436,9 +436,7 @@ TestGecko()
   mozilla::TestVideoData();
   mozilla::TestAudioData();
   mozilla::Test_MozPromise();
-  // FIXME: This one never ends. Keeps waiting on a ConditionVariable to to be
-  // set in the Benchmark. More investigation required.
-  // mozilla::Test_MediaDataDecoder();
+  mozilla::Test_MediaDataDecoder();
   mozilla::Test_MediaMIMETypes();
   mozilla::Test_MP4Demuxer();
   mozilla::TestDecoderTraits();
