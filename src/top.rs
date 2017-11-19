@@ -5,7 +5,7 @@
 use CanPlayType;
 use TimeStamp;
 use bindings::*;
-use player::{Metadata, Plane, PlanarYCbCrImage, Player, PlayerEventSink, Region};
+use player::{Metadata, PlanarYCbCrImage, Player, PlayerEventSink, Region};
 use std::ffi::CStr;
 use std::ffi::CString;
 use std::mem;
@@ -291,27 +291,6 @@ fn to_ffi_planar_ycbycr_images(size: usize, elements: *mut GeckoPlanarYCbCrImage
     elements.iter()
     .map(|&img| -> PlanarYCbCrImage {
         PlanarYCbCrImage {
-            y_plane: Plane {
-                pixels: img.mYChannel as *const u8,
-                width: img.mYWidth,
-                stride: img.mYStride,
-                height: img.mYHeight,
-                skip: img.mYSkip,
-            },
-            cb_plane: Plane {
-                pixels: img.mCbChannel as *const u8,
-                width: img.mCbCrWidth,
-                stride: img.mCbCrStride,
-                height: img.mCbCrHeight,
-                skip: img.mCbSkip,
-            },
-            cr_plane: Plane {
-                pixels: img.mCrChannel as *const u8,
-                width: img.mCbCrWidth,
-                stride: img.mCbCrStride,
-                height: img.mCbCrHeight,
-                skip: img.mCrSkip,
-            },
             picture: Region {
                 x: img.mPicX,
                 y: img.mPicY,

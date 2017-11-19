@@ -175,6 +175,7 @@ pub fn main_wrapper(example: &mut Example, options: Option<webrender::RendererOp
     api.generate_frame(document_id, None);
 
     'outer: loop { //for event in window.wait_events() {
+        println!("Event loop!");
         let mut events = Vec::new();
         // events.push(event);
 

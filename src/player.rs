@@ -4,8 +4,8 @@
 
 use GeckoMedia;
 use bindings::GeckoPlanarYCbCrImage;
-use bindings::{GeckoMedia_FreeImage, GeckoMedia_Player_Pause, GeckoMedia_Player_Play};
-use bindings::{GeckoMedia_Player_Seek, GeckoMedia_Player_SetVolume, GeckoMedia_Player_Shutdown};
+use bindings::{GeckoMedia_Player_Pause, GeckoMedia_Player_Play};
+use bindings::{GeckoMedia_Player_Seek, GeckoMedia_Player_SetVolume, GeckoMedia_Player_Shutdown, PlaneType_Cb, PlaneType_Cr, PlaneType_Y};
 use std::slice;
 use timestamp::TimeStamp;
 
@@ -65,7 +65,7 @@ impl Plane {
 
 /// A subregion of an image buffer.
 pub struct Region {
-    // X coordinate of the origin of the region.
+    // X coordinate of theExternalImage origin of the region.
     pub x: u32,
     // Y coordinate of the origin of the region.
     pub y: u32,
@@ -89,12 +89,6 @@ pub struct Region {
 /// The color format is detected based on the height/width ratios
 /// defined above.
 pub struct PlanarYCbCrImage {
-    /// Pixel data for the Y channel.
-    pub y_plane: Plane,
-    /// Pixel data for the Cb channel.
-    pub cb_plane: Plane,
-    /// Pixel data for the Cr channel.
-    pub cr_plane: Plane,
     /// The sub-region of the buffer which contains the image to be rendered.
     pub picture: Region,
     /// The time at which this image should be renderd.
@@ -104,9 +98,54 @@ pub struct PlanarYCbCrImage {
     pub gecko_image: GeckoPlanarYCbCrImage,
 }
 
+impl PlanarYCbCrImage {
+
+    fn get_pixels(&self, plane: u32) -> *const u8 {
+        let img = &self.gecko_image;
+        let f = img.mGetPixelData.unwrap();
+        unsafe {
+            f(img.mFrameID, plane) as *const u8
+        }
+    }
+
+    pub fn y_plane(&self) -> Plane {
+        let img = &self.gecko_image;
+        Plane {
+            pixels: self.get_pixels(PlaneType_Y),
+            width: img.mYWidth,
+            stride: img.mYStride,
+            height: img.mYHeight,
+            skip: img.mYSkip,
+        }
+    }
+
+    pub fn cb_plane(&self) -> Plane {
+        let img = &self.gecko_image;
+        Plane {
+            pixels: self.get_pixels(PlaneType_Cb),
+            width: img.mCbCrWidth,
+            stride: img.mCbCrStride,
+            height: img.mCbCrHeight,
+            skip: img.mCbSkip,
+        }
+    }
+
+    pub fn cr_plane(&self) -> Plane {
+        let img = &self.gecko_image;
+        Plane {
+            pixels: self.get_pixels(PlaneType_Cr),
+            width: img.mCbCrWidth,
+            stride: img.mCbCrStride,
+            height: img.mCbCrHeight,
+            skip: img.mCrSkip,
+        }
+    }
+}
+
 impl Drop for PlanarYCbCrImage {
     fn drop(&mut self) {
-        unsafe { GeckoMedia_FreeImage(self.gecko_image); };
+        let frameID = self.gecko_image.mFrameID;
+        unsafe { (self.gecko_image.mFreePixelData.unwrap())(frameID); };
     }
 }
 

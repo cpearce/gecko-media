@@ -63,14 +63,7 @@ impl PlayerWrapper {
             fn seek_started(&self) {}
             fn seek_completed(&self) {}
             fn update_current_images(&self, images: Vec<PlanarYCbCrImage>) {
-                // for img in images.iter() {
-                    // let _pixels = img.y_plane.data();
-                    // let now = TimeStamp(time::precise_time_ns());
-                    // if img.time_stamp > now {
-                    //     println!("frame display at {} (now is {})", img.time_stamp, now);
-                    // }
-                // }
-                self.frame_sender.send(images);
+                self.frame_sender.send(images).unwrap();
             }
         }
 
@@ -197,6 +190,7 @@ impl ui::Example for App {
         _pipeline_id: PipelineId,
         _document_id: DocumentId,
     ) {
+        println!("Render");
         let bounds = LayoutRect::new(LayoutPoint::zero(), layout_size);
         let info = LayoutPrimitiveInfo::new(bounds);
         builder.push_stacking_context(
@@ -213,35 +207,47 @@ impl ui::Example for App {
             self.frame_queue = v;
         }
 
+        let time_now = TimeStamp(time::precise_time_ns());
+        while self.frame_queue.len() > 1 && self.frame_queue[0].time_stamp > time_now {
+            println!("now={} dropping {}", time_now, self.frame_queue[0].time_stamp);
+            self.frame_queue.remove(0);
+        }
+
+        println!("After drop loop");
+
         if self.frame_queue.len() > 0 {
             // Just paint the first of now...
             let frame = &self.frame_queue[0];
 
-            let y_chanel = ImageKey::new(244, 0);
-            let u_chanel = ImageKey::new(244, 1);
-            let v_chanel = ImageKey::new(244, 2);
+            let y_chanel = api.generate_image_key();;
+            let u_chanel = api.generate_image_key();;
+            let v_chanel = api.generate_image_key();;
 
+            let y_plane = frame.y_plane();
             resources.add_image(
                 y_chanel,
-                ImageDescriptor::new(frame.y_plane.width, frame.y_plane.height, ImageFormat::A8, true),
-                ImageData::new(frame.y_plane.data()),
+                ImageDescriptor::new(y_plane.width as u32, y_plane.height as u32, ImageFormat::A8, true),
+                ImageData::new(y_plane.data().to_vec()),
                 None,
             );
+            let cb_plane = frame.cb_plane();
             resources.add_image(
                 u_chanel,
-                ImageDescriptor::new(frame.u_plane.width, frame.u_plane.height, ImageFormat::A8, true),
-                ImageData::new(frame.u_plane.data()),
+                ImageDescriptor::new(cb_plane.width as u32, cb_plane.height as u32, ImageFormat::A8, true),
+                ImageData::new(cb_plane.data().to_vec()),
                 None,
             );
+            let cr_plane = frame.cr_plane();
             resources.add_image(
                 v_chanel,
-                ImageDescriptor::new(frame.v_plane.width, frame.v_plane.height, ImageFormat::A8, true),
-                ImageData::new(frame.v_plane.data()),
+                ImageDescriptor::new(cr_plane.width as u32, cr_plane.height as u32, ImageFormat::A8, true),
+                ImageData::new(cr_plane.data().to_vec()),
                 None,
             );
 
             let info = LayoutPrimitiveInfo::with_clip_rect(
-                LayoutRect::new(LayoutPoint::new(300.0, 0.0), LayoutSize::new(100.0, 100.0)),
+                LayoutRect::new(LayoutPoint::new(0.0, 0.0),
+                LayoutSize::new(frame.picture.width as f32, frame.picture.height as f32)),
                 bounds,
             );
             builder.push_yuv_image(
@@ -257,7 +263,8 @@ impl ui::Example for App {
     }
 
     fn on_event(&mut self, event: glutin::Event, api: &RenderApi, document_id: DocumentId) -> bool {
-         false
+        // println!("on_event");
+        true
     }
 
     // fn get_external_image_handler(&mut self) -> Option<Box<webrender::ExternalImageHandler>> {
@@ -295,9 +302,11 @@ fn main() {
     let mut bytes = vec![];
     file.read_to_end(&mut bytes).unwrap();
 
-    let (app, frame_sender) = App::new();
+    let (mut app, frame_sender) = App::new();
 
     let player = PlayerWrapper::new(bytes, mime, frame_sender);
+    ui::main_wrapper(&mut app, None);
+    println!("Ended main_wrapper");
     player.await_ended();
     GeckoMedia::shutdown().unwrap();
 }
