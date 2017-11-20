@@ -19,6 +19,7 @@ extern crate time;
 extern crate webrender;
 
 use webrender::api::*;
+use webrender::api::ImageData::*;
 
 mod ui;
 
@@ -161,26 +162,43 @@ impl PlayerWrapper {
 //     fn unlock(&mut self, _key: ExternalImageId, _channel_index: u8) {}
 // }
 
+const EXTERNAL_Y_CHANNEL_ID : ExternalImageId = ExternalImageId(1);
+const EXTERNAL_CB_CHANNEL_ID : ExternalImageId = ExternalImageId(2);
+const EXTERNAL_CR_CHANNEL_ID : ExternalImageId = ExternalImageId(3);
+
 struct App {
     // image_handler: Option<Box<webrender::ExternalImageHandler>>,
     frame_receiver: mpsc::Receiver<Vec<PlanarYCbCrImage>>,
     frame_queue: Vec<PlanarYCbCrImage>,
+    y_channel_key: Option<ImageKey>,
+    cb_channel_key: Option<ImageKey>,
+    cr_channel_key: Option<ImageKey>,
 }
 
 impl App {
     fn new() -> (App, mpsc::Sender<Vec<PlanarYCbCrImage>>) {
         let (frame_sender, frame_receiver) = mpsc::channel();
-        // let handler = Box::new(ImageGenerator { frame_receiver: receiver, frame_queue: vec![] });
+        let handler = Box::new(ImageGenerator { frame_receiver: receiver, frame_queue: vec![] });
         let app = App {
             // image_handler: handler,
             frame_receiver: frame_receiver,
             frame_queue: vec![],
+            y_channel_key: None,
+            cb_channel_key: None,
+            cr_channel_key: None,
         };
         (app, frame_sender)
     }
 }
 
 impl ui::Example for App {
+
+    fn init(&mut self, api: &RenderApi) {
+        // self.y_channel_key = Some(api.generate_image_key());
+        // self.cb_channel_key = Some(api.generate_image_key());
+        // self.cr_channel_key = Some(api.generate_image_key());
+    }
+
     fn render(
         &mut self,
         api: &RenderApi,
@@ -219,29 +237,89 @@ impl ui::Example for App {
             // Just paint the first of now...
             let frame = &self.frame_queue[0];
 
-            let y_chanel = api.generate_image_key();;
-            let u_chanel = api.generate_image_key();;
-            let v_chanel = api.generate_image_key();;
-
+            if let None = self.y_channel_key {
+                self.y_channel_key = Some(api.generate_image_key());
+            }
             let y_plane = frame.y_plane();
             resources.add_image(
-                y_chanel,
+                self.y_channel_key.unwrap(),
                 ImageDescriptor::new(y_plane.width as u32, y_plane.height as u32, ImageFormat::A8, true),
-                ImageData::new(y_plane.data().to_vec()),
+                External(ExternalImageData{
+                    id: EXTERNAL_Y_CHANNEL_ID,
+                    channel_index: 0,
+                    image_type:ExternalImageType::ExternalBuffer}),
                 None,
             );
+
+            // match self.y_channel_key {
+            //     Some(image_key) => {
+            //         let y_plane = frame.y_plane();
+            //         resources.update_image(
+            //             self.y_channel_key.unwrap(),
+            //             ImageDescriptor::new(y_plane.width as u32, y_plane.height as u32, ImageFormat::A8, true),
+            //             External(ExternalImageData{
+            //                 id: EXTERNAL_Y_CHANNEL_ID,
+            //                 channel: 0,
+            //                 image_type:ExternalImageType::ExternalBuffer}),
+            //             None,
+            //         );
+            //     },
+            //     None => {
+            //         self.y_channel_key = Some(api.generate_image_key());
+            //         let y_plane = frame.y_plane();
+            //         resources.add_image(
+            //             self.y_channel_key.unwrap(),
+            //             ImageDescriptor::new(y_plane.width as u32, y_plane.height as u32, ImageFormat::A8, true),
+            //             External(ExternalImageData{
+            //                 id: EXTERNAL_Y_CHANNEL_ID,
+            //                 channel: 0,
+            //                 image_type:ExternalImageType::ExternalBuffer}),
+            //             None,
+            //         );
+            //     }
+            // }
+
+            // let cb_plane = frame.cb_plane();
+            // resources.add_image(
+            //     u_chanel,
+            //     ImageDescriptor::new(cb_plane.width as u32, cb_plane.height as u32, ImageFormat::A8, true),
+            //     ImageData::new(cb_plane.data().to_vec()),
+            //     None,
+            // );
+            // let cr_plane = frame.cr_plane();
+            // resources.add_image(
+            //     v_chanel,
+            //     ImageDescriptor::new(cr_plane.width as u32, cr_plane.height as u32, ImageFormat::A8, true),
+            //     ImageData::new(cr_plane.data().to_vec()),
+            //     None,
+            // );
+
+
+            if let None = self.cb_channel_key {
+                self.cb_channel_key = Some(api.generate_image_key());
+            }
             let cb_plane = frame.cb_plane();
             resources.add_image(
-                u_chanel,
+                self.cb_channel_key.unwrap(),
                 ImageDescriptor::new(cb_plane.width as u32, cb_plane.height as u32, ImageFormat::A8, true),
-                ImageData::new(cb_plane.data().to_vec()),
+                External(ExternalImageData{
+                    id: EXTERNAL_CB_CHANNEL_ID,
+                    channel_index: 1,
+                    image_type:ExternalImageType::ExternalBuffer}),
                 None,
             );
+
+            if let None = self.cr_channel_key {
+                self.cr_channel_key = Some(api.generate_image_key());
+            }
             let cr_plane = frame.cr_plane();
             resources.add_image(
-                v_chanel,
+                self.cr_channel_key.unwrap(),
                 ImageDescriptor::new(cr_plane.width as u32, cr_plane.height as u32, ImageFormat::A8, true),
-                ImageData::new(cr_plane.data().to_vec()),
+                External(ExternalImageData{
+                    id: EXTERNAL_CR_CHANNEL_ID,
+                    channel_index: 2,
+                    image_type:ExternalImageType::ExternalBuffer}),
                 None,
             );
 
@@ -252,7 +330,7 @@ impl ui::Example for App {
             );
             builder.push_yuv_image(
                 &info,
-                YuvData::PlanarYCbCr(y_chanel, u_chanel, v_chanel),
+                YuvData::PlanarYCbCr(self.y_channel_key.unwrap(), self.cb_channel_key.unwrap(), self.cr_channel_key.unwrap()),
                 YuvColorSpace::Rec601,
                 ImageRendering::Auto,
             );
@@ -267,9 +345,9 @@ impl ui::Example for App {
         true
     }
 
-    // fn get_external_image_handler(&mut self) -> Option<Box<webrender::ExternalImageHandler>> {
-    //     mem::replace(self.image_handler, None)
-    // }
+    fn get_external_image_handler(&mut self) -> Option<Box<webrender::ExternalImageHandler>> {
+        mem::replace(self.image_handler, None)
+    }
 }
 
 

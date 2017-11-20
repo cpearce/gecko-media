@@ -84,6 +84,7 @@ pub trait Example {
         None
     }
     fn draw_custom(&self, _gl: &gl::Gl) {}
+    fn init(&mut self, api: &RenderApi) {}
 }
 
 pub fn main_wrapper(example: &mut Example, options: Option<webrender::RendererOptions>) {
@@ -138,6 +139,8 @@ pub fn main_wrapper(example: &mut Example, options: Option<webrender::RendererOp
     let (mut renderer, sender) = webrender::Renderer::new(gl.clone(), notifier, opts).unwrap();
     let api = sender.create_api();
     let document_id = api.add_document(size);
+
+    example.init(&api);
 
     if let Some(external_image_handler) = example.get_external_image_handler() {
         renderer.set_external_image_handler(external_image_handler);
