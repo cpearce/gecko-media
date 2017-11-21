@@ -2,14 +2,11 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-// extern crate env_logger;
-
 // Copied from:
 // https://github.com/servo/webrender/blob/58ab0f136885b33386ee85878939e3384e2b1fba/webrender/examples/common/boilerplate.rs
 
 use gleam::gl;
 use glutin;
-use std::env;
 use webrender;
 use webrender::api::*;
 
@@ -83,23 +80,14 @@ pub trait Example {
     ) -> Option<Box<webrender::OutputImageHandler>> {
         None
     }
-    fn draw_custom(&self, _gl: &gl::Gl) {}
     fn init(&mut self, window_proxy: glutin::WindowProxy) {}
 }
 
 pub fn main_wrapper(example: &mut Example, options: Option<webrender::RendererOptions>) {
-    // env_logger::init().unwrap();
-
-    // let args: Vec<String> = env::args().collect();
     let res_path = None;
-    // if args.len() > 1 {
-    //     Some(PathBuf::from(&args[1]))
-    // } else {
-    //     None
-    // };
 
     let window = glutin::WindowBuilder::new()
-        .with_title("WebRender Sample App")
+        .with_title("Gecko Media Player")
         .with_multitouch()
         .with_gl(glutin::GlRequest::GlThenGles {
             opengl_version: (3, 2),
@@ -191,78 +179,6 @@ pub fn main_wrapper(example: &mut Example, options: Option<webrender::RendererOp
                 glutin::Event::Closed |
                 glutin::Event::KeyboardInput(_, _, Some(glutin::VirtualKeyCode::Escape)) => break 'outer,
 
-                glutin::Event::KeyboardInput(
-                    glutin::ElementState::Pressed,
-                    _,
-                    Some(glutin::VirtualKeyCode::P),
-                ) => {
-                    let mut flags = renderer.get_debug_flags();
-                    flags.toggle(webrender::DebugFlags::PROFILER_DBG);
-                    renderer.set_debug_flags(flags);
-                }
-                glutin::Event::KeyboardInput(
-                    glutin::ElementState::Pressed,
-                    _,
-                    Some(glutin::VirtualKeyCode::O),
-                ) => {
-                    let mut flags = renderer.get_debug_flags();
-                    flags.toggle(webrender::DebugFlags::RENDER_TARGET_DBG);
-                    renderer.set_debug_flags(flags);
-                }
-                glutin::Event::KeyboardInput(
-                    glutin::ElementState::Pressed,
-                    _,
-                    Some(glutin::VirtualKeyCode::I),
-                ) => {
-                    let mut flags = renderer.get_debug_flags();
-                    flags.toggle(webrender::DebugFlags::TEXTURE_CACHE_DBG);
-                    renderer.set_debug_flags(flags);
-                }
-                glutin::Event::KeyboardInput(
-                    glutin::ElementState::Pressed,
-                    _,
-                    Some(glutin::VirtualKeyCode::B),
-                ) => {
-                    let mut flags = renderer.get_debug_flags();
-                    flags.toggle(webrender::DebugFlags::ALPHA_PRIM_DBG);
-                    renderer.set_debug_flags(flags);
-                }
-                glutin::Event::KeyboardInput(
-                    glutin::ElementState::Pressed,
-                    _,
-                    Some(glutin::VirtualKeyCode::Q),
-                ) => {
-                    renderer.toggle_queries_enabled();
-                }
-                glutin::Event::KeyboardInput(
-                    glutin::ElementState::Pressed,
-                    _,
-                    Some(glutin::VirtualKeyCode::Key1),
-                ) => {
-                    api.set_window_parameters(document_id,
-                        size,
-                        DeviceUintRect::new(DeviceUintPoint::zero(), size),
-                        1.0
-                    );
-                }
-                glutin::Event::KeyboardInput(
-                    glutin::ElementState::Pressed,
-                    _,
-                    Some(glutin::VirtualKeyCode::Key2),
-                ) => {
-                    api.set_window_parameters(document_id,
-                        size,
-                        DeviceUintRect::new(DeviceUintPoint::zero(), size),
-                        2.0
-                    );
-                }
-                glutin::Event::KeyboardInput(
-                    glutin::ElementState::Pressed,
-                    _,
-                    Some(glutin::VirtualKeyCode::M),
-                ) => {
-                    api.notify_memory_pressure();
-                }
                 _ => if example.on_event(event, &api, document_id) {
                     let mut builder = DisplayListBuilder::new(pipeline_id, layout_size);
                     let mut resources = ResourceUpdates::new();
@@ -291,7 +207,6 @@ pub fn main_wrapper(example: &mut Example, options: Option<webrender::RendererOp
 
         renderer.update();
         renderer.render(DeviceUintSize::new(width, height)).unwrap();
-        example.draw_custom(&*gl);
         window.swap_buffers().ok();
     }
 
