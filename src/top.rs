@@ -286,11 +286,26 @@ fn to_ffi_vec(bytes: Vec<u8>) -> RustVecU8Object {
     }
 }
 
+fn copy_pixel_data(img: &GeckoPlanarYCbCrImage,
+                   plane: u32,
+                   stride: &i32,
+                   height: &i32) -> Vec<u8> {
+    let f = img.mGetPixelData.unwrap();
+    unsafe {
+        let size = stride as usize * height as usize;
+        let pixels = f(img.mFrameID, plane) as *const u8;
+        slice::from_raw_parts(pixels, size).to_vec()
+    }
+}
+
 fn to_ffi_planar_ycbycr_images(size: usize, elements: *mut GeckoPlanarYCbCrImage) -> Vec<PlanarYCbCrImage> {
     let elements = unsafe { slice::from_raw_parts(elements, size) };
     elements.iter()
     .map(|&img| -> PlanarYCbCrImage {
         PlanarYCbCrImage {
+            y_plane: copy_pixel_data(img, PlaneType_Y, &img.mYStride, &img.mYHeight),
+            cb_plane: copy_pixel_data(img, PlaneType_Cb, &img.mCbCrStride, &img.mCbCrHeight),
+            cr_plane: copy_pixel_data(img, PlaneType_Cr, &img.mCbCrStride, &img.mCbCrHeight),,
             picture: Region {
                 x: img.mPicX,
                 y: img.mPicY,

@@ -376,7 +376,8 @@ void PlanarYCbCrImage_FreeData(uint32_t aFrameID) {
   if (*refcnt == 0) {
     sImageFFIRefCnt.Remove(aFrameID);
     printf("%s fid=%u\n", __func__, aFrameID);
-    sImages.Remove(aFrameID);
+    // sImages.Remove(aFrameID);
+    // TODO: copy on rust side doesn't addref!
   }
 }
 

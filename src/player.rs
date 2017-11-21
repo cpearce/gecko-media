@@ -41,7 +41,7 @@ pub struct Metadata {
 ///                skip
 ///
 pub struct Plane {
-    pub pixels: *const u8,
+    pub pixels: Vec<u8>,
     /// The width of a line of pixels in bytes.
     pub width: i32,
     /// The stride of a line of pixels in bytes.
@@ -54,13 +54,13 @@ pub struct Plane {
 }
 
 impl Plane {
-    /// Returns a slice storing the raw pixel data.
-    pub fn data<'a>(&'a self) -> &'a [u8] {
-        unsafe {
-            let size = self.stride as usize * self.height as usize;
-            slice::from_raw_parts(self.pixels, size)
-        }
-    }
+    // /// Returns a slice storing the raw pixel data.
+    // pub fn data<'a>(&'a self) -> &'a [u8] {
+    //     unsafe {
+    //         let size = self.stride as usize * self.height as usize;
+    //         slice::from_raw_parts(self.pixels, size)
+    //     }
+    // }
 }
 
 /// A subregion of an image buffer.
@@ -89,6 +89,9 @@ pub struct Region {
 /// The color format is detected based on the height/width ratios
 /// defined above.
 pub struct PlanarYCbCrImage {
+    pub y_plane: Plane,
+    pub cb_plane: Plane,
+    pub cr_plane: Plane,
     /// The sub-region of the buffer which contains the image to be rendered.
     pub picture: Region,
     /// The time at which this image should be renderd.
@@ -99,6 +102,20 @@ pub struct PlanarYCbCrImage {
 }
 
 impl PlanarYCbCrImage {
+
+    /// Returns a slice storing the raw pixel data.
+    pub fn pixel_data<'a>(&'a self, channel_index: u8) -> &'a [u8] {
+        let img = &self.gecko_image;
+        let (pixels, size) = match channel_index {
+            0 => (self.get_pixels(PlaneType_Y), img.mYStride as usize * img.mYHeight as usize),
+            1 => (self.get_pixels(PlaneType_Cb), img.mCbCrStride as usize * img.mCbCrHeight as usize),
+            2 => (self.get_pixels(PlaneType_Cr), img.mCbCrStride as usize * img.mCbCrHeight as usize),
+             _ => panic!("Invalid channel_index"),
+        };
+        unsafe {
+            slice::from_raw_parts(pixels, size)
+        }
+    }
 
     fn get_pixels(&self, plane: u32) -> *const u8 {
         let img = &self.gecko_image;
@@ -111,7 +128,7 @@ impl PlanarYCbCrImage {
     pub fn y_plane(&self) -> Plane {
         let img = &self.gecko_image;
         Plane {
-            pixels: self.get_pixels(PlaneType_Y),
+            // pixels: self.get_pixels(PlaneType_Y),
             width: img.mYWidth,
             stride: img.mYStride,
             height: img.mYHeight,
@@ -122,7 +139,7 @@ impl PlanarYCbCrImage {
     pub fn cb_plane(&self) -> Plane {
         let img = &self.gecko_image;
         Plane {
-            pixels: self.get_pixels(PlaneType_Cb),
+            // pixels: self.get_pixels(PlaneType_Cb),
             width: img.mCbCrWidth,
             stride: img.mCbCrStride,
             height: img.mCbCrHeight,
@@ -133,7 +150,7 @@ impl PlanarYCbCrImage {
     pub fn cr_plane(&self) -> Plane {
         let img = &self.gecko_image;
         Plane {
-            pixels: self.get_pixels(PlaneType_Cr),
+            // pixels: self.get_pixels(PlaneType_Cr),
             width: img.mCbCrWidth,
             stride: img.mCbCrStride,
             height: img.mCbCrHeight,

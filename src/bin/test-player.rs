@@ -12,6 +12,7 @@ use std::io::prelude::*;
 use std::path::Path;
 use std::sync::mpsc;
 use std::thread;
+use std::mem;
 
 extern crate gleam;
 extern crate glutin;
@@ -117,75 +118,74 @@ impl PlayerWrapper {
     }
 }
 
-// struct ImageGenerator {
-//     frame_receiver: mpsc::Receiver<Vec<PlanarYCbCrImage>>,
-//     frame_queue: Vec<PlanarYCbCrImage>,
-// }
+struct ImageGenerator {
+    current_frame_receiver: mpsc::Receiver<PlanarYCbCrImage>,
+    current_image: Option<PlanarYCbCrImage>,
+ }
 
-// impl ImageGenerator {
+impl webrender::ExternalImageHandler for ImageGenerator {
+    fn lock(&mut self, _key: ExternalImageId, channel_index: u8) -> webrender::ExternalImage {
 
-//     fn generate_image(&mut self, size: u32) {
-//         let pattern = &self.patterns[self.next_pattern];
-//         self.current_image.clear();
-//         for y in 0 .. size {
-//             for x in 0 .. size {
-//                 let lum = 255 * (1 - (((x & 8) == 0) ^ ((y & 8) == 0)) as u8);
-//                 self.current_image.extend_from_slice(&[
-//                     lum * pattern[0],
-//                     lum * pattern[1],
-//                     lum * pattern[2],
-//                     0xff,
-//                 ]);
-//             }
-//         }
+        if let Ok(v) = self.current_frame_receiver.try_recv() {
+            self.current_image = Some(v);
+            for i in 0 .. 3 {
+                self.channel_data = Some(self.current_image.unwrap().pixel_data(i));
+            }
+        };
 
-//         self.next_pattern = (self.next_pattern + 1) % self.patterns.len();
-//     }
+        if let None = self.current_image {
+            panic!("Don't have a current image!");
+        }
 
-//     fn take(&mut self) -> Vec<u8> {
-//         mem::replace(&mut self.current_image, Vec::new())
-//     }
-// }
+        webrender::ExternalImage {
+            u0: 0.0,
+            v0: 0.0,
+            u1: 1.0,
+            v1: 1.0,
+            source: webrender::ExternalImageSource::RawData(
+                self.current_data[channel_index].unwrap()),
+        }
+    }
+    fn unlock(&mut self, _key: ExternalImageId, _channel_index: u8) {
 
-// impl webrender::ExternalImageHandler for ImageGenerator {
-//     fn lock(&mut self, _key: ExternalImageId, channel_index: u8) -> webrender::ExternalImage {
-
-//         self.generate_image(channel_index as u32);
-//         webrender::ExternalImage {
-//             u0: 0.0,
-//             v0: 0.0,
-//             u1: 1.0,
-//             v1: 1.0,
-//             source: webrender::ExternalImageSource::RawData(&self.current_image),
-//         }
-//     }
-//     fn unlock(&mut self, _key: ExternalImageId, _channel_index: u8) {}
-// }
+    }
+}
 
 const EXTERNAL_Y_CHANNEL_ID : ExternalImageId = ExternalImageId(1);
 const EXTERNAL_CB_CHANNEL_ID : ExternalImageId = ExternalImageId(2);
 const EXTERNAL_CR_CHANNEL_ID : ExternalImageId = ExternalImageId(3);
 
 struct App {
-    // image_handler: Option<Box<webrender::ExternalImageHandler>>,
+    image_handler: Option<Box<webrender::ExternalImageHandler>>,
     frame_receiver: mpsc::Receiver<Vec<PlanarYCbCrImage>>,
+    current_frame_sender: mpsc::Sender<PlanarYCbCrImage>,
     frame_queue: Vec<PlanarYCbCrImage>,
     y_channel_key: Option<ImageKey>,
     cb_channel_key: Option<ImageKey>,
     cr_channel_key: Option<ImageKey>,
+    last_frame_id: u32,
 }
 
 impl App {
     fn new() -> (App, mpsc::Sender<Vec<PlanarYCbCrImage>>) {
+        // Channel for frames to pass between Gecko and player.
         let (frame_sender, frame_receiver) = mpsc::channel();
-        let handler = Box::new(ImageGenerator { frame_receiver: receiver, frame_queue: vec![] });
+        // Channel for the current frame to be sent between the main
+        // render loop and the external image handler.
+        let (current_frame_sender, current_frame_receiver) = mpsc::channel();
+        let handler = Box::new(ImageGenerator {
+            current_frame_receiver: current_frame_receiver,
+            current_image: None,
+        });
         let app = App {
-            // image_handler: handler,
+            image_handler: Some(handler),
             frame_receiver: frame_receiver,
             frame_queue: vec![],
+            current_frame_sender: current_frame_sender,
             y_channel_key: None,
             cb_channel_key: None,
             cr_channel_key: None,
+            last_frame_id: 0,
         };
         (app, frame_sender)
     }
@@ -193,11 +193,11 @@ impl App {
 
 impl ui::Example for App {
 
-    fn init(&mut self, api: &RenderApi) {
-        // self.y_channel_key = Some(api.generate_image_key());
-        // self.cb_channel_key = Some(api.generate_image_key());
-        // self.cr_channel_key = Some(api.generate_image_key());
-    }
+    // fn init(&mut self, api: &RenderApi) {
+    //     // self.y_channel_key = Some(api.generate_image_key());
+    //     // self.cb_channel_key = Some(api.generate_image_key());
+    //     // self.cr_channel_key = Some(api.generate_image_key());
+    // }
 
     fn render(
         &mut self,
@@ -221,6 +221,7 @@ impl ui::Example for App {
             Vec::new(),
         );
 
+        // let mut frame_queue = self.frame_queue.borrow_mut();
         if let Ok(v) = self.frame_receiver.try_recv() {
             self.frame_queue = v;
         }
@@ -229,6 +230,11 @@ impl ui::Example for App {
         while self.frame_queue.len() > 1 && self.frame_queue[0].time_stamp > time_now {
             println!("now={} dropping {}", time_now, self.frame_queue[0].time_stamp);
             self.frame_queue.remove(0);
+        }
+
+        if self.last_frame_id != self.frame_queue[0].frame_id {
+            self.last_frame_id = self.frame_queue[0].frame_id;
+            self.current_frame_sender.send(self.frame_queue[0]).unwrap(); // leaks!
         }
 
         println!("After drop loop");
@@ -346,7 +352,7 @@ impl ui::Example for App {
     }
 
     fn get_external_image_handler(&mut self) -> Option<Box<webrender::ExternalImageHandler>> {
-        mem::replace(self.image_handler, None)
+        mem::replace(&mut self.image_handler, None)
     }
 }
 
