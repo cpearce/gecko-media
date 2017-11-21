@@ -138,10 +138,10 @@ pub fn main_wrapper(example: &mut Example, options: Option<webrender::RendererOp
     }
 
     let epoch = Epoch(0);
-    let root_background_color = ColorF::new(0.3, 0.0, 0.0, 1.0);
+    let root_background_color = ColorF::new(0.0, 0.0, 0.0, 1.0);
 
     let pipeline_id = PipelineId(0, 0);
-    let layout_size = LayoutSize::new(width as f32, height as f32);
+    let mut layout_size = LayoutSize::new(width as f32, height as f32);
     let mut builder = DisplayListBuilder::new(pipeline_id, layout_size);
     let mut resources = ResourceUpdates::new();
 
@@ -166,7 +166,6 @@ pub fn main_wrapper(example: &mut Example, options: Option<webrender::RendererOp
     api.generate_frame(document_id, None);
 
     'outer: for event in window.wait_events() {
-        println!("Event loop!");
         let mut events = Vec::new();
         events.push(event);
 
@@ -178,8 +177,20 @@ pub fn main_wrapper(example: &mut Example, options: Option<webrender::RendererOp
             match event {
                 glutin::Event::Closed |
                 glutin::Event::KeyboardInput(_, _, Some(glutin::VirtualKeyCode::Escape)) => break 'outer,
+                glutin::Event::Resized(width, height) => {
+                    let (width, height) = window.get_inner_size_pixels().unwrap();
+                    let size = DeviceUintSize::new(width, height);
+                    api.set_window_parameters(
+                        document_id,
+                        size.clone(),
+                        DeviceUintRect::new(DeviceUintPoint::new(0, 0), size),
+                        window.hidpi_factor(),
+                    );
+                },
 
                 _ => if example.on_event(event, &api, document_id) {
+                    let (width, height) = window.get_inner_size_pixels().unwrap();
+                    layout_size = LayoutSize::new(width as f32, height as f32);
                     let mut builder = DisplayListBuilder::new(pipeline_id, layout_size);
                     let mut resources = ResourceUpdates::new();
 
@@ -206,6 +217,7 @@ pub fn main_wrapper(example: &mut Example, options: Option<webrender::RendererOp
         }
 
         renderer.update();
+        let (width, height) = window.get_inner_size_pixels().unwrap();
         renderer.render(DeviceUintSize::new(width, height)).unwrap();
         window.swap_buffers().ok();
     }
