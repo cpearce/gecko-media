@@ -84,7 +84,7 @@ pub trait Example {
         None
     }
     fn draw_custom(&self, _gl: &gl::Gl) {}
-    // fn init(&mut self, api: &RenderApi) {}
+    fn init(&mut self, window_proxy: glutin::WindowProxy) {}
 }
 
 pub fn main_wrapper(example: &mut Example, options: Option<webrender::RendererOptions>) {
@@ -140,7 +140,7 @@ pub fn main_wrapper(example: &mut Example, options: Option<webrender::RendererOp
     let api = sender.create_api();
     let document_id = api.add_document(size);
 
-    // example.init(&api);
+    example.init(window.create_window_proxy());
 
     if let Some(external_image_handler) = example.get_external_image_handler() {
         renderer.set_external_image_handler(external_image_handler);
@@ -177,10 +177,10 @@ pub fn main_wrapper(example: &mut Example, options: Option<webrender::RendererOp
     api.set_root_pipeline(document_id, pipeline_id);
     api.generate_frame(document_id, None);
 
-    'outer: loop { //for event in window.wait_events() {
+    'outer: for event in window.wait_events() {
         println!("Event loop!");
         let mut events = Vec::new();
-        // events.push(event);
+        events.push(event);
 
         for event in window.poll_events() {
             events.push(event);

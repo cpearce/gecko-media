@@ -362,6 +362,30 @@ impl ui::Example for App {
     fn get_external_image_handler(&mut self) -> Option<Box<webrender::ExternalImageHandler>> {
         mem::replace(&mut self.image_handler, None)
     }
+
+    fn init(&mut self, window_proxy: glutin::WindowProxy) {
+        // Install a relay between the channel that receives new frames
+        // and notify the event loop to wake it up after new frames come
+        // in so they're rendered.
+        let (sender, receiver) = mpsc::channel();
+        let wrapped_receiver = mem::replace(&mut self.frame_receiver, receiver);
+        thread::spawn(move || {
+            loop {
+                match wrapped_receiver.recv() {
+                    Ok(frames) => {
+                        match sender.send(frames) {
+                            Ok(_) => (),
+                            Err(_) => break,
+                        }
+                        window_proxy.wakeup_event_loop();
+                    },
+                    Err(_) => {
+                        break;
+                    }
+                }
+            }
+        });
+    }
 }
 
 
