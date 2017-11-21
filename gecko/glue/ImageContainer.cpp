@@ -364,7 +364,20 @@ StaticMutex sImageMutex;
 static nsRefPtrHashtable<nsUint32HashKey, Image> sImages;
 static nsDataHashtable<nsUint32HashKey, uint32_t> sImageFFIRefCnt;
 
+void PlanarYCbCrImage_AddRefPixelData(uint32_t aFrameID)
+{
+  printf("%s fid=%u\n", __func__, aFrameID);
+  StaticMutexAutoLock lock(sImageMutex);
+  MOZ_ASSERT(sImages.Contains(aFrameID));
+  MOZ_ASSERT(sImageFFIRefCnt.Contains(aFrameID));
+
+  uint32_t* refcnt = sImageFFIRefCnt.GetValue(aFrameID);
+  MOZ_ASSERT(refcnt && *refcnt);
+  *refcnt += 1;
+}
+
 void PlanarYCbCrImage_FreeData(uint32_t aFrameID) {
+  printf("%s fid=%u\n", __func__, aFrameID);
   StaticMutexAutoLock lock(sImageMutex);
   MOZ_ASSERT(sImages.Contains(aFrameID));
   MOZ_ASSERT(sImageFFIRefCnt.Contains(aFrameID));
@@ -376,15 +389,14 @@ void PlanarYCbCrImage_FreeData(uint32_t aFrameID) {
   if (*refcnt == 0) {
     sImageFFIRefCnt.Remove(aFrameID);
     printf("%s fid=%u\n", __func__, aFrameID);
-    // sImages.Remove(aFrameID);
-    // TODO: copy on rust side doesn't addref!
+    sImages.Remove(aFrameID);
   }
 }
 
 const uint8_t*
 PlanarYCbCrImage_GetPixelData(uint32_t aFrameID, PlaneType aPlaneType)
 {
-  printf("%s fid=%u\n", __func__, aFrameID);
+  // printf("%s fid=%u\n", __func__, aFrameID);
   RefPtr<Image> img;
   {
     StaticMutexAutoLock lock(sImageMutex);
@@ -457,6 +469,7 @@ ImageContainer::NotifyOwnerOfNewImages()
       }
     }
 
+    img->mAddRefPixelData = &PlanarYCbCrImage_AddRefPixelData;
     img->mFreePixelData = &PlanarYCbCrImage_FreeData;
     img->mGetPixelData = &PlanarYCbCrImage_GetPixelData;
   }

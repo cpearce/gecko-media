@@ -81,6 +81,7 @@ struct GeckoPlanarYCbCrImage {
   uint64_t mTimeStamp;
   uint32_t mFrameID;
 
+  void (*mAddRefPixelData)(uint32_t aFrameID);
   void (*mFreePixelData)(uint32_t aFrameID);
   const uint8_t* (*mGetPixelData)(uint32_t aFrameID, PlaneType aPlaneType);
 };

@@ -41,7 +41,7 @@ pub struct Metadata {
 ///                skip
 ///
 pub struct Plane {
-    pub pixels: Vec<u8>,
+    pub pixels: *const u8,
     /// The width of a line of pixels in bytes.
     pub width: i32,
     /// The stride of a line of pixels in bytes.
@@ -54,16 +54,17 @@ pub struct Plane {
 }
 
 impl Plane {
-    // /// Returns a slice storing the raw pixel data.
-    // pub fn data<'a>(&'a self) -> &'a [u8] {
-    //     unsafe {
-    //         let size = self.stride as usize * self.height as usize;
-    //         slice::from_raw_parts(self.pixels, size)
-    //     }
-    // }
+    /// Returns a slice storing the raw pixel data.
+    pub fn data<'a>(&'a self) -> &'a [u8] {
+        unsafe {
+            let size = self.stride as usize * self.height as usize;
+            slice::from_raw_parts(self.pixels, size)
+        }
+    }
 }
 
 /// A subregion of an image buffer.
+#[derive(Clone)]
 pub struct Region {
     // X coordinate of theExternalImage origin of the region.
     pub x: u32,
@@ -89,9 +90,9 @@ pub struct Region {
 /// The color format is detected based on the height/width ratios
 /// defined above.
 pub struct PlanarYCbCrImage {
-    pub y_plane: Plane,
-    pub cb_plane: Plane,
-    pub cr_plane: Plane,
+    // pub y_plane: Plane,
+    // pub cb_plane: Plane,
+    // pub cr_plane: Plane,
     /// The sub-region of the buffer which contains the image to be rendered.
     pub picture: Region,
     /// The time at which this image should be renderd.
@@ -99,6 +100,23 @@ pub struct PlanarYCbCrImage {
     /// A stream-unique identifier.
     pub frame_id: u32,
     pub gecko_image: GeckoPlanarYCbCrImage,
+}
+
+// When cloning, we need to ensure we increment the reference count on
+// the pixel data on the C++ side, so that our Drop impl can decrement
+// the reference count appropriately.
+impl Clone for PlanarYCbCrImage {
+    fn clone(&self) -> Self {
+        unsafe {
+            (self.gecko_image.mAddRefPixelData.unwrap())(self.frame_id);
+        }
+        PlanarYCbCrImage {
+            picture: self.picture.clone(),
+            time_stamp: self.time_stamp.clone(),
+            frame_id: self.frame_id,
+            gecko_image: self.gecko_image,
+        }
+    }
 }
 
 impl PlanarYCbCrImage {
@@ -128,7 +146,7 @@ impl PlanarYCbCrImage {
     pub fn y_plane(&self) -> Plane {
         let img = &self.gecko_image;
         Plane {
-            // pixels: self.get_pixels(PlaneType_Y),
+            pixels: self.get_pixels(PlaneType_Y),
             width: img.mYWidth,
             stride: img.mYStride,
             height: img.mYHeight,
@@ -139,7 +157,7 @@ impl PlanarYCbCrImage {
     pub fn cb_plane(&self) -> Plane {
         let img = &self.gecko_image;
         Plane {
-            // pixels: self.get_pixels(PlaneType_Cb),
+            pixels: self.get_pixels(PlaneType_Cb),
             width: img.mCbCrWidth,
             stride: img.mCbCrStride,
             height: img.mCbCrHeight,
@@ -150,7 +168,7 @@ impl PlanarYCbCrImage {
     pub fn cr_plane(&self) -> Plane {
         let img = &self.gecko_image;
         Plane {
-            // pixels: self.get_pixels(PlaneType_Cr),
+            pixels: self.get_pixels(PlaneType_Cr),
             width: img.mCbCrWidth,
             stride: img.mCbCrStride,
             height: img.mCbCrHeight,
@@ -161,8 +179,8 @@ impl PlanarYCbCrImage {
 
 impl Drop for PlanarYCbCrImage {
     fn drop(&mut self) {
-        let frameID = self.gecko_image.mFrameID;
-        unsafe { (self.gecko_image.mFreePixelData.unwrap())(frameID); };
+        let frame_id = self.gecko_image.mFrameID;
+        unsafe { (self.gecko_image.mFreePixelData.unwrap())(frame_id); };
     }
 }
 
