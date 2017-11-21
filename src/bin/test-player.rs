@@ -110,11 +110,17 @@ impl PlayerWrapper {
         }
     }
     pub fn shutdown(&self) {
-        self.sender.send(PlayerEvent::BreakOutOfEventLoop).unwrap();
+        match self.sender.send(PlayerEvent::BreakOutOfEventLoop) {
+            Ok(_) => (),
+            Err(_) => (),
+        }
         self.await_ended();
     }
     pub fn await_ended(&self) {
-        self.ended_receiver.recv().unwrap();
+        match self.ended_receiver.recv() {
+            Ok(_) => (),
+            Err(_) => (),
+        }
     }
 }
 
@@ -193,12 +199,6 @@ impl App {
 
 impl ui::Example for App {
 
-    // fn init(&mut self, api: &RenderApi) {
-    //     // self.y_channel_key = Some(api.generate_image_key());
-    //     // self.cb_channel_key = Some(api.generate_image_key());
-    //     // self.cr_channel_key = Some(api.generate_image_key());
-    // }
-
     fn render(
         &mut self,
         api: &RenderApi,
@@ -208,7 +208,6 @@ impl ui::Example for App {
         _pipeline_id: PipelineId,
         _document_id: DocumentId,
     ) {
-        // println!("Render");
         let bounds = LayoutRect::new(LayoutPoint::zero(), layout_size);
         let info = LayoutPrimitiveInfo::new(bounds);
         builder.push_stacking_context(
@@ -221,27 +220,23 @@ impl ui::Example for App {
             Vec::new(),
         );
 
-        // let mut received_new_frames = false;
         if let Ok(v) = self.frame_receiver.try_recv() {
             self.frame_queue = v;
-            // received_new_frames = true
         }
 
         let time_now = TimeStamp(time::precise_time_ns());
         while self.frame_queue.len() > 1 && self.frame_queue[0].time_stamp > time_now {
-            println!("now={} dropping {}", time_now, self.frame_queue[0].time_stamp);
+            // println!("now={} dropping {}", time_now, self.frame_queue[0].time_stamp);
             self.frame_queue.remove(0);
         }
 
-        if self.last_frame_id != self.frame_queue[0].frame_id {
-            self.last_frame_id = self.frame_queue[0].frame_id;
-            println!("Sending {}", self.frame_queue[0].frame_id);
-            self.current_frame_sender.send(self.frame_queue[0].clone()).unwrap();
-        }
-
-        // println!("After drop loop");
-
         if self.frame_queue.len() > 0 {
+
+            if self.last_frame_id != self.frame_queue[0].frame_id {
+                self.last_frame_id = self.frame_queue[0].frame_id;
+                self.current_frame_sender.send(self.frame_queue[0].clone()).unwrap();
+            }
+
             // Assume dimensions of first frame.
             let frame = &self.frame_queue[0];
 
@@ -422,7 +417,7 @@ fn main() {
 
     let player = PlayerWrapper::new(bytes, mime, frame_sender);
     ui::main_wrapper(&mut app, None);
-    println!("Ended main_wrapper");
+    player.shutdown();
     player.await_ended();
     GeckoMedia::shutdown().unwrap();
 }
