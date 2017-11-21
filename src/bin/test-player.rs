@@ -327,9 +327,12 @@ impl ui::Example for App {
                 }
             }
 
+            let aspect_ratio = frame.picture.width as f32 / frame.picture.height as f32;
+            let render_size = LayoutSize::new(layout_size.width as f32,
+                                              layout_size.width as f32 / aspect_ratio);
+            let render_location = LayoutPoint::new(0.0, (layout_size.height - render_size.height) / 2.0 );
             let info = LayoutPrimitiveInfo::with_clip_rect(
-                LayoutRect::new(LayoutPoint::new(0.0, 0.0),
-                LayoutSize::new(frame.picture.width as f32, frame.picture.height as f32)),
+                LayoutRect::new(render_location, render_size),
                 bounds,
             );
             builder.push_yuv_image(
