@@ -189,33 +189,33 @@ pub fn main_wrapper(example: &mut Example, options: Option<webrender::RendererOp
                 },
 
                 _ => if example.on_event(event, &api, document_id) {
-                    let (width, height) = window.get_inner_size_pixels().unwrap();
-                    layout_size = LayoutSize::new(width as f32, height as f32);
-                    let mut builder = DisplayListBuilder::new(pipeline_id, layout_size);
-                    let mut resources = ResourceUpdates::new();
-
-                    example.render(
-                        &api,
-                        &mut builder,
-                        &mut resources,
-                        layout_size,
-                        pipeline_id,
-                        document_id,
-                    );
-                    api.set_display_list(
-                        document_id,
-                        epoch,
-                        Some(root_background_color),
-                        LayoutSize::new(width as f32, height as f32),
-                        builder.finalize(),
-                        true,
-                        resources,
-                    );
-                    api.generate_frame(document_id, None);
                 },
             }
         }
 
+        let (width, height) = window.get_inner_size_pixels().unwrap();
+        layout_size = LayoutSize::new(width as f32, height as f32);
+        let mut builder = DisplayListBuilder::new(pipeline_id, layout_size);
+        let mut resources = ResourceUpdates::new();
+
+        example.render(
+            &api,
+            &mut builder,
+            &mut resources,
+            layout_size,
+            pipeline_id,
+            document_id,
+        );
+        api.set_display_list(
+            document_id,
+            epoch,
+            Some(root_background_color),
+            LayoutSize::new(width as f32, height as f32),
+            builder.finalize(),
+            true,
+            resources,
+        );
+        api.generate_frame(document_id, None);
         renderer.update();
         let (width, height) = window.get_inner_size_pixels().unwrap();
         renderer.render(DeviceUintSize::new(width, height)).unwrap();
