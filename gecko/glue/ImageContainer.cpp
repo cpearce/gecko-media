@@ -366,7 +366,6 @@ static nsDataHashtable<nsUint32HashKey, uint32_t> sImageFFIRefCnt;
 
 void PlanarYCbCrImage_AddRefPixelData(uint32_t aFrameID)
 {
-  printf("%s fid=%u\n", __func__, aFrameID);
   StaticMutexAutoLock lock(sImageMutex);
   MOZ_ASSERT(sImages.Contains(aFrameID));
   MOZ_ASSERT(sImageFFIRefCnt.Contains(aFrameID));
@@ -377,7 +376,6 @@ void PlanarYCbCrImage_AddRefPixelData(uint32_t aFrameID)
 }
 
 void PlanarYCbCrImage_FreeData(uint32_t aFrameID) {
-  printf("%s fid=%u\n", __func__, aFrameID);
   StaticMutexAutoLock lock(sImageMutex);
   MOZ_ASSERT(sImages.Contains(aFrameID));
   MOZ_ASSERT(sImageFFIRefCnt.Contains(aFrameID));
@@ -388,7 +386,6 @@ void PlanarYCbCrImage_FreeData(uint32_t aFrameID) {
 
   if (*refcnt == 0) {
     sImageFFIRefCnt.Remove(aFrameID);
-    printf("%s fid=%u\n", __func__, aFrameID);
     sImages.Remove(aFrameID);
   }
 }
@@ -396,7 +393,6 @@ void PlanarYCbCrImage_FreeData(uint32_t aFrameID) {
 const uint8_t*
 PlanarYCbCrImage_GetPixelData(uint32_t aFrameID, PlaneType aPlaneType)
 {
-  // printf("%s fid=%u\n", __func__, aFrameID);
   RefPtr<Image> img;
   {
     StaticMutexAutoLock lock(sImageMutex);
@@ -461,7 +457,6 @@ ImageContainer::NotifyOwnerOfNewImages()
       if (!sImages.Contains(img->mFrameID)) {
         sImages.Put(img->mFrameID, owningImage.mImage);
         sImageFFIRefCnt.Put(img->mFrameID, 1);
-        // printf("Put fid=%u in images\n", img->mFrameID);
       } else {
         uint32_t* refcnt = sImageFFIRefCnt.GetValue(img->mFrameID);
         MOZ_ASSERT(refcnt && *refcnt);
