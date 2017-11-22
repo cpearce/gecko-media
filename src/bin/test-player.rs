@@ -151,9 +151,7 @@ impl webrender::ExternalImageHandler for ImageGenerator {
     }
 }
 
-const EXTERNAL_Y_CHANNEL_ID : ExternalImageId = ExternalImageId(1);
-const EXTERNAL_CB_CHANNEL_ID : ExternalImageId = ExternalImageId(2);
-const EXTERNAL_CR_CHANNEL_ID : ExternalImageId = ExternalImageId(3);
+const EXTERNAL_VIDEO_IMAGE_ID : ExternalImageId = ExternalImageId(1);
 
 struct App {
     image_handler: Option<Box<webrender::ExternalImageHandler>>,
@@ -248,7 +246,7 @@ impl ui::Example for App {
                         *image_key,
                         ImageDescriptor::new(y_plane.width as u32, y_plane.height as u32, ImageFormat::A8, true),
                         External(ExternalImageData{
-                            id: EXTERNAL_Y_CHANNEL_ID,
+                            id: EXTERNAL_VIDEO_IMAGE_ID,
                             channel_index: 0,
                             image_type:ExternalImageType::ExternalBuffer}),
                         None,
@@ -262,7 +260,7 @@ impl ui::Example for App {
                         image_key,
                         ImageDescriptor::new(y_plane.width as u32, y_plane.height as u32, ImageFormat::A8, true),
                         External(ExternalImageData{
-                            id: EXTERNAL_Y_CHANNEL_ID,
+                            id: EXTERNAL_VIDEO_IMAGE_ID,
                             channel_index: 0,
                             image_type:ExternalImageType::ExternalBuffer}),
                         None,
@@ -277,7 +275,7 @@ impl ui::Example for App {
                         *image_key,
                         ImageDescriptor::new(cb_plane.width as u32, cb_plane.height as u32, ImageFormat::A8, true),
                         External(ExternalImageData{
-                            id: EXTERNAL_Y_CHANNEL_ID,
+                            id: EXTERNAL_VIDEO_IMAGE_ID,
                             channel_index: 1,
                             image_type:ExternalImageType::ExternalBuffer}),
                         None,
@@ -291,7 +289,7 @@ impl ui::Example for App {
                         image_key,
                         ImageDescriptor::new(cb_plane.width as u32, cb_plane.height as u32, ImageFormat::A8, true),
                         External(ExternalImageData{
-                            id: EXTERNAL_Y_CHANNEL_ID,
+                            id: EXTERNAL_VIDEO_IMAGE_ID,
                             channel_index: 1,
                             image_type:ExternalImageType::ExternalBuffer}),
                         None,
@@ -306,7 +304,7 @@ impl ui::Example for App {
                         *image_key,
                         ImageDescriptor::new(cr_plane.width as u32, cr_plane.height as u32, ImageFormat::A8, true),
                         External(ExternalImageData{
-                            id: EXTERNAL_Y_CHANNEL_ID,
+                            id: EXTERNAL_VIDEO_IMAGE_ID,
                             channel_index: 2,
                             image_type:ExternalImageType::ExternalBuffer}),
                         None,
@@ -320,7 +318,7 @@ impl ui::Example for App {
                         image_key,
                         ImageDescriptor::new(cr_plane.width as u32, cr_plane.height as u32, ImageFormat::A8, true),
                         External(ExternalImageData{
-                            id: EXTERNAL_Y_CHANNEL_ID,
+                            id: EXTERNAL_VIDEO_IMAGE_ID,
                             channel_index: 2,
                             image_type:ExternalImageType::ExternalBuffer}),
                         None,
