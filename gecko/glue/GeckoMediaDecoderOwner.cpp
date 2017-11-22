@@ -16,6 +16,11 @@ GeckoMediaDecoderOwner::GeckoMediaDecoderOwner(PlayerCallbackObject aCallback)
 {
 }
 
+GeckoMediaDecoderOwner::GeckoMediaDecoderOwner()
+{
+
+}
+
 void
 GeckoMediaDecoderOwner::DownloadProgressed()
 {
