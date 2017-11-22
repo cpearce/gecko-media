@@ -29,9 +29,11 @@ class HTMLMediaElement;
 class GeckoMediaDecoderOwner : public MediaDecoderOwner
 {
 public:
-  GeckoMediaDecoderOwner() {}
+
+  NS_INLINE_DECL_THREADSAFE_REFCOUNTING(GeckoMediaDecoderOwner)
+
   GeckoMediaDecoderOwner(PlayerCallbackObject aCallback);
-  ~GeckoMediaDecoderOwner();
+  GeckoMediaDecoderOwner();
 
   // Called by the media decoder to indicate that the download is progressing.
   void DownloadProgressed() override;
@@ -195,7 +197,11 @@ public:
 
   void UpdateCurrentImages(nsTArray<GeckoPlanarYCbCrImage> aImages);
 
+  void Shutdown();
+
 private:
+  ~GeckoMediaDecoderOwner() {}
+
   bool mHasError = false;
   PlayerCallbackObject mCallback = { 0 };
   RefPtr<GeckoMediaDecoder> mDecoder;
