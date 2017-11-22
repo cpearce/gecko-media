@@ -197,6 +197,6 @@ pub fn main_wrapper(example: &mut Example, options: Option<webrender::RendererOp
     renderer.deinit();
     let duration = time::precise_time_s() - start_time;
     let fps = (counter as f64) / duration;
-    println!("Rendered {} frames in {} seconds; {} fps)",
+    println!("Rendered {} frames in {} seconds; {} fps",
         counter, duration, fps)
 }
