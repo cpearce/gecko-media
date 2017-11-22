@@ -131,18 +131,12 @@ struct ImageGenerator {
 
 impl webrender::ExternalImageHandler for ImageGenerator {
     fn lock(&mut self, _key: ExternalImageId, channel_index: u8) -> webrender::ExternalImage {
-
         if let Ok(v) = self.current_frame_receiver.try_recv() {
             self.current_image = Some(v);
-            // println!("received {}", self.current_image.as_ref().map(|i| i.frame_id).unwrap());
         };
-
         if let None = self.current_image {
             panic!("Don't have a current image!");
         }
-
-        // println!("handling {}", self.current_image.as_ref().map(|i| i.frame_id).unwrap());
-
         webrender::ExternalImage {
             u0: 0.0,
             v0: 0.0,
@@ -355,12 +349,6 @@ impl ui::Example for App {
     }
 
     fn on_event(&mut self, event: glutin::Event, api: &RenderApi, document_id: DocumentId) -> bool {
-        // let mut received_new_frames = false;
-        // if let Ok(v) = self.frame_receiver.try_recv() {
-        //     self.frame_queue = v;
-        //     received_new_frames = true
-        // }
-        // received_new_frames
         true
     }
 
