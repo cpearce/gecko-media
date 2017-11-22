@@ -189,8 +189,7 @@ mod tests {
                     reached_error = true;
                     break;
                 }
-                Status::UpdateImages(_images) => {
-                }
+                Status::UpdateImages(_images) => {}
                 _ => {}
             };
         }
